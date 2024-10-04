@@ -1,78 +1,67 @@
-document.addEventListener("DOMContentLoaded", loadTasks);
+// Select form elements
+const todoForm = document.querySelector('#todo-form');
+const todoList = document.querySelector('#todo-list');
+const taskInput = document.querySelector('#task-input');
+const dateInput = document.querySelector('#date-input');
 
-const form = document.getElementById("todo-form");
-const tasksContainer = document.getElementById("tasks");
+// Load tasks from localStorage on page load
+window.addEventListener('DOMContentLoaded', loadStoredTasks);
 
-form.addEventListener("submit", (e) => {
+// Add new task on form submission
+todoForm.addEventListener('submit', handleFormSubmit);
+
+function handleFormSubmit(e) {
     e.preventDefault();
-    addTask();
-});
+    
+    const task = taskInput.value.trim();
+    const date = dateInput.value;
 
-function loadTasks() {
-    const tasks = getTasksFromLocalStorage();
-    tasks.forEach((task) => displayTask(task));
-}
-
-function addTask() {
-    const date = document.getElementById("todo-date").value;
-    const taskText = document.getElementById("todo-task").value;
-
-    if (date && taskText) {
-        const task = { date, taskText };
-        displayTask(task);
-        saveTaskToLocalStorage(task);
-        form.reset();
+    if (task && date) {
+        addTaskToList(task, date);
+        saveTaskToStorage(task, date);
+        todoForm.reset();  // Clear input fields after submission
     }
 }
 
-function displayTask(task) {
-    const taskElement = document.createElement("li");
-
-    const taskContent = document.createElement("span");
-    taskContent.classList.add("task-text");
-    taskContent.innerText = `${task.date}: ${task.taskText}`;
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.innerText = "Delete";
-    deleteBtn.classList.add("delete-btn");
-    deleteBtn.addEventListener("click", () => {
-        deleteTask(taskElement, task);
-    });
-
-    const editBtn = document.createElement("button");
-    editBtn.innerText = "Edit";
-    editBtn.classList.add("edit-btn");
-    editBtn.addEventListener("click", () => {
-        editTask(taskElement, task);
-    });
-
-    taskElement.appendChild(taskContent);
-    taskElement.appendChild(editBtn);
-    taskElement.appendChild(deleteBtn);
-    tasksContainer.appendChild(taskElement);
+// Load tasks from localStorage
+function loadStoredTasks() {
+    const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    tasks.forEach(({ task, date }) => addTaskToList(task, date));
 }
 
-function saveTaskToLocalStorage(task) {
-    const tasks = getTasksFromLocalStorage();
-    tasks.push(task);
-    localStorage.setItem("tasks", JSON.stringify(tasks));
+// Add task to the list
+function addTaskToList(task, date) {
+    const li = document.createElement('li');
+    li.innerHTML = `
+        ${date} - ${task} 
+        <button class="edit">Edit</button>
+        <button class="delete">Delete</button>
+    `;
+    todoList.appendChild(li);
+
+    // Set up buttons for edit and delete
+    li.querySelector('.delete').addEventListener('click', () => deleteTask(li, task));
+    li.querySelector('.edit').addEventListener('click', () => editTask(li, task, date));
 }
 
-function getTasksFromLocalStorage() {
-    return localStorage.getItem("tasks")
-        ? JSON.parse(localStorage.getItem("tasks"))
-        : [];
+// Save task to localStorage
+function saveTaskToStorage(task, date) {
+    const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    tasks.push({ task, date });
+    localStorage.setItem('tasks', JSON.stringify(tasks));
 }
 
-function deleteTask(taskElement, task) {
-    taskElement.remove();
-    let tasks = getTasksFromLocalStorage();
-    tasks = tasks.filter(t => t.date !== task.date || t.taskText !== task.taskText);
-    localStorage.setItem("tasks", JSON.stringify(tasks));
+// Delete task from list and storage
+function deleteTask(li, task) {
+    li.remove();
+    const tasks = JSON.parse(localStorage.getItem('tasks'));
+    const updatedTasks = tasks.filter(t => t.task !== task);
+    localStorage.setItem('tasks', JSON.stringify(updatedTasks));
 }
 
-function editTask(taskElement, task) {
-    document.getElementById("todo-date").value = task.date;
-    document.getElementById("todo-task").value = task.taskText;
-    deleteTask(taskElement, task);
+// Edit task
+function editTask(li, task, date) {
+    taskInput.value = task;
+    dateInput.value = date;
+    deleteTask(li, task);  // Remove the old task while editing
 }
